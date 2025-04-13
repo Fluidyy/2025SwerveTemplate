@@ -31,7 +31,7 @@ import frc.robot.subsystems.flywheel.FlywheelIO;
 import frc.robot.subsystems.flywheel.FlywheelIOSIM;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOLimelight;
+import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSIM;
 import frc.robot.utils.TunableController;
 import frc.robot.utils.TunableController.TunableControllerType;
@@ -60,27 +60,22 @@ public class RobotContainer {
   private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
   public RobotContainer() {
+
     DriveIOCTRE currentDriveTrain = TunerConstants.createDrivetrain();
     switch (Constants.currentMode) {
       case REAL:
-        // Real robot, instantiate hardware IO implementations
         drivetrain = new Drive(currentDriveTrain);
 
         new Vision(
             drivetrain::addVisionData,
-            new VisionIOLimelight("limelight-fl", drivetrain::getVisionParameters),
-            new VisionIOLimelight("limelight-fr", drivetrain::getVisionParameters),
-            new VisionIOLimelight("limelight-bl", drivetrain::getVisionParameters),
-            new VisionIOLimelight("limelight-br", drivetrain::getVisionParameters));
+            new VisionIOPhotonVision(
+                "Front Camera",
+                new Transform3d(
+                    new Translation3d(0.2, 0.0, 0.8), new Rotation3d(0, Math.toRadians(20), 0)),
+                drivetrain::getVisionParameters));
 
-        // flywheel = new Flywheel(new FlywheelIOCTRE()); // Disabled to prevent robot movement if
-        // deployed to a real robot
         flywheel = new Flywheel(new FlywheelIO() {});
-        // elevator = new Elevator(new ElevatorIOCTRE()); // Disabled to prevent robot movement if
-        // deployed to a real robot
         elevator = new Elevator(new ElevatorIO() {});
-        // arm = new Arm(new ArmIOCTRE()); // Disabled to prevent robot movement if deployed to a
-        // real robot
         arm = new Arm(new ArmIO() {});
         break;
 
@@ -248,6 +243,10 @@ public class RobotContainer {
     // joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
     joystick.a().onTrue(flywheel.L1()).onTrue(arm.L1()).onTrue(elevator.L1());
     joystick.b().onTrue(flywheel.L2()).onTrue(arm.L2()).onTrue(elevator.L2());
+
+    joystick.leftBumper().onTrue(DriveCommands.autoAlignToClosestBranch(drivetrain, true));  // Align to LEFT pole
+joystick.rightBumper().onTrue(DriveCommands.autoAlignToClosestBranch(drivetrain, false)); // Align to RIGHT pole
+
   }
 
   public Command getAutonomousCommand() {

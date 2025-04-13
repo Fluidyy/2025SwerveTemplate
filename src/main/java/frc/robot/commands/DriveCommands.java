@@ -7,7 +7,10 @@ package frc.robot.commands;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveModule.SteerRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
@@ -15,8 +18,12 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Constants;
 import frc.robot.subsystems.drive.*;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.utils.FieldConstants;
+import frc.robot.utils.FieldConstants.ReefHeight;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Arrays;
 
 public class DriveCommands extends Command {
 
@@ -108,5 +115,87 @@ public class DriveCommands extends Command {
     Angle[] positions = new Angle[Constants.PP_CONFIG.numModules];
     Rotation2d lastAngle = Rotation2d.kZero;
     double gyroDelta = 0.0;
+  }
+
+  public static Command autoAlignToClosestReefFace(Drive drivetrain) {
+    Pose2d currentPose = drivetrain.getPose();
+
+    // Find the reef face that's closest to the current robot pose
+    Pose2d closestFace =
+        Arrays.stream(FieldConstants.Reef.centerFaces)
+            .min(
+                (a, b) ->
+                    Double.compare(
+                        a.getTranslation().getDistance(currentPose.getTranslation()),
+                        b.getTranslation().getDistance(currentPose.getTranslation())))
+            .orElse(FieldConstants.Reef.centerFaces[0]); // fallback if empty
+
+    // Return the pathfinding command
+    return AutoBuilder.pathfindToPose(
+        closestFace,
+        new PathConstraints(3.0, 3, 540, 700), // Speed, accel, angular vel, angular accel
+        0.0 // End velocity (stop at the pose)
+        );
+  }
+
+  public static Command autoAlignToClosestReefBranch(Drive drivetrain, ReefHeight targetLevel) {
+    Pose2d robotPose = drivetrain.getPose();
+
+    int closestBranchIndex = -1;
+    double minDistance = Double.MAX_VALUE;
+
+    for (int i = 0; i < FieldConstants.Reef.branchPositions.size(); i++) {
+      Pose2d branchPose = FieldConstants.Reef.branchPositions.get(i).get(targetLevel).toPose2d();
+
+      double distance = robotPose.getTranslation().getDistance(branchPose.getTranslation());
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestBranchIndex = i;
+      }
+    }
+
+    Pose2d closestTargetPose =
+        FieldConstants.Reef.branchPositions.get(closestBranchIndex).get(targetLevel).toPose2d();
+
+    return AutoBuilder.pathfindToPose(
+        closestTargetPose, new PathConstraints(3.0, 3.0, 3.0, 3.0), 0.0);
+  }
+
+  public static Command autoAlignToClosestBranch(Drive drivetrain, boolean goLeft) {
+    Pose2d currentPose = drivetrain.getPose();
+
+    // Find closest reef face
+    Pose2d closestFace = FieldConstants.Reef.centerFaces[0];
+    double minDistance = currentPose.getTranslation().getDistance(closestFace.getTranslation());
+
+    for (Pose2d face : FieldConstants.Reef.centerFaces) {
+      double distance = currentPose.getTranslation().getDistance(face.getTranslation());
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestFace = face;
+      }
+    }
+
+    // Determine face index
+    int faceIndex = -1;
+    for (int i = 0; i < FieldConstants.Reef.centerFaces.length; i++) {
+      if (FieldConstants.Reef.centerFaces[i] == closestFace) {
+        faceIndex = i;
+        break;
+      }
+    }
+
+    // Get the LEFT or RIGHT pole pose
+    int branchIndex = goLeft ? faceIndex * 2 + 1 : faceIndex * 2;
+
+    // Use any height (we’ll just pull the pose2d of the branch)
+    Pose2d targetPose =
+        FieldConstants.Reef.branchPositions
+            .get(branchIndex)
+            .get(FieldConstants.ReefHeight.L1) // doesn’t matter which height, we only use X/Y
+            .toPose2d();
+
+    return AutoBuilder.pathfindToPose(targetPose, new PathConstraints(3.0, 3.0, 3.0, 3.0), 0.0);
   }
 }
