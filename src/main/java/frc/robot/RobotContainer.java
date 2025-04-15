@@ -8,6 +8,8 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.units.Unit;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -36,6 +38,9 @@ import frc.robot.subsystems.vision.VisionIOPhotonVisionSIM;
 import frc.robot.utils.TunableController;
 import frc.robot.utils.TunableController.TunableControllerType;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import static edu.wpi.first.math.util.Units.inchesToMeters;
+
+//hello
 
 public class RobotContainer {
   private LinearVelocity MaxSpeed = TunerConstants.kSpeedAt12Volts;
@@ -71,7 +76,8 @@ public class RobotContainer {
             new VisionIOPhotonVision(
                 "Front Camera",
                 new Transform3d(
-                    new Translation3d(0.2, 0.0, 0.8), new Rotation3d(0, Math.toRadians(20), 0)),
+                    new Translation3d(inchesToMeters(7), 0, inchesToMeters(30.625)),
+                    new Rotation3d(0, Math.toRadians(35), Math.toRadians(0))),
                 drivetrain::getVisionParameters));
 
         flywheel = new Flywheel(new FlywheelIO() {});
