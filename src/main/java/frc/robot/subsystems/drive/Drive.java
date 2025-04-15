@@ -186,7 +186,7 @@ public class Drive extends SubsystemBase {
             // PID constants for translation
             new PIDConstants(10, 0, 0),
             // PID constants for rotation
-            new PIDConstants(7, 0, 0)),
+            new PIDConstants(10, 0, 0)),
         Constants.PP_CONFIG,
         // Assume the path needs to be flipped for Red vs Blue, this is normally the case
         () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
@@ -277,6 +277,11 @@ public class Drive extends SubsystemBase {
     io.resetPose(pose);
   }
 
+  public void resetgyro() {
+    Pose2d pose1 = new Pose2d(getPose().getX(), getPose().getY(), new Rotation2d(0));
+    io.resetPose(pose1);
+  }
+
   /** Returns the current odometry pose. */
   @AutoLogOutput(key = "Odometry/Robot")
   public Pose2d getPose() {
@@ -296,6 +301,10 @@ public class Drive extends SubsystemBase {
 
   public Rotation2d getOperatorForwardDirection() {
     return inputs.operatorForwardDirection;
+  }
+
+  public void seedFieldCentric() {
+    io.setOperatorPerspectiveForward(Rotation2d.fromDegrees(0));
   }
 
   public Angle[] getDrivePositions() {

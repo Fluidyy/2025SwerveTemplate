@@ -186,16 +186,48 @@ public class DriveCommands extends Command {
       }
     }
 
-    // Get the LEFT or RIGHT pole pose
+    // Get the LEFT or RIGHT branch (pole) pose
     int branchIndex = goLeft ? faceIndex * 2 + 1 : faceIndex * 2;
 
-    // Use any height (we’ll just pull the pose2d of the branch)
-    Pose2d targetPose =
+    Pose2d branchPose =
         FieldConstants.Reef.branchPositions
             .get(branchIndex)
-            .get(FieldConstants.ReefHeight.L1) // doesn’t matter which height, we only use X/Y
+            .get(FieldConstants.ReefHeight.L1) // Just for X/Y
             .toPose2d();
 
+    // Set rotation to match the reef face direction
+    Pose2d targetPose = new Pose2d(branchPose.getTranslation(), closestFace.getRotation());
+
     return AutoBuilder.pathfindToPose(targetPose, new PathConstraints(3.0, 3.0, 3.0, 3.0), 0.0);
+  }
+
+  public static Pose2d getClosestBranchPose(Pose2d currentPose, boolean goLeft) {
+    // Find closest face
+    Pose2d closestFace = FieldConstants.Reef.centerFaces[0];
+    double minDistance = currentPose.getTranslation().getDistance(closestFace.getTranslation());
+
+    for (Pose2d face : FieldConstants.Reef.centerFaces) {
+      double distance = currentPose.getTranslation().getDistance(face.getTranslation());
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestFace = face;
+      }
+    }
+
+    // Get index of that face
+    int faceIndex = -1;
+    for (int i = 0; i < FieldConstants.Reef.centerFaces.length; i++) {
+      if (FieldConstants.Reef.centerFaces[i] == closestFace) {
+        faceIndex = i;
+        break;
+      }
+    }
+
+    // Get branch index and return L1 pose2d for simplicity
+    int branchIndex = goLeft ? faceIndex * 2 + 1 : faceIndex * 2;
+    return FieldConstants.Reef.branchPositions
+        .get(branchIndex)
+        .get(FieldConstants.ReefHeight.L1)
+        .toPose2d();
   }
 }

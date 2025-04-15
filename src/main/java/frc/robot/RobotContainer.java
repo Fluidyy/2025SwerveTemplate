@@ -1,19 +1,18 @@
 package frc.robot;
 
+import static edu.wpi.first.math.util.Units.inchesToMeters;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
-import edu.wpi.first.math.geometry.Rotation2d;
+import com.pathplanner.lib.path.PathConstraints;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.units.Unit;
-import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.arm.Arm;
@@ -23,8 +22,6 @@ import frc.robot.subsystems.arm.ArmIOSIM;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
-import frc.robot.subsystems.drive.requests.ProfiledFieldCentricFacingAngle;
-import frc.robot.subsystems.drive.requests.SwerveSetpointGen;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSIM;
@@ -38,9 +35,8 @@ import frc.robot.subsystems.vision.VisionIOPhotonVisionSIM;
 import frc.robot.utils.TunableController;
 import frc.robot.utils.TunableController.TunableControllerType;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-import static edu.wpi.first.math.util.Units.inchesToMeters;
 
-//hello
+// hello
 
 public class RobotContainer {
   private LinearVelocity MaxSpeed = TunerConstants.kSpeedAt12Volts;
@@ -94,8 +90,8 @@ public class RobotContainer {
             new VisionIOPhotonVisionSIM(
                 "Front Camera",
                 new Transform3d(
-                    new Translation3d(0.2, 0.0, 0.8),
-                    new Rotation3d(0, Math.toRadians(20), Math.toRadians(0))),
+                    new Translation3d(inchesToMeters(7), 0, inchesToMeters(30.625)),
+                    new Rotation3d(0, Math.toRadians(35), Math.toRadians(0))),
                 drivetrain::getVisionParameters),
             new VisionIOPhotonVisionSIM(
                 "Back Camera",
@@ -180,79 +176,121 @@ public class RobotContainer {
                                 .customRight()
                                 .getX())))); // Drive counterclockwise with negative X (left)
 
-    // joystick.a().onTrue(Commands.runOnce(() -> drivetrain.resetPose(Pose2d.kZero)));
+    // joystick.x().onTrue(drivetrain.runOnce(() -> drivetrain.resetgyro()));
+    // joystick
+    //     .x()
+    //     .onTrue(
+    //         drivetrain.runOnce(
+    //             () -> drivetrain.resetPose(new Pose2d(0.0, 0.0, Rotation2d.fromDegrees(0)))));
+    // joystick
+    //     .b()
+    //     .whileTrue(
+    //         drivetrain.applyRequest(
+    //             () ->
+    //                 point.withModuleDirection(
+    //                     new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
+
+    // // Custom Swerve Request that use PathPlanner Setpoint Generator. Tuning NEEDED. Instructions
+    // // can be found here
+    // // https://hemlock5712.github.io/Swerve-Setup/talonfx-swerve-tuning.html
+    // SwerveSetpointGen setpointGen =
+    //     new SwerveSetpointGen(
+    //             drivetrain.getChassisSpeeds(),
+    //             drivetrain.getModuleStates(),
+    //             drivetrain::getRotation)
+    //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+    // joystick
+    //     .x()
+    //     .whileTrue(
+    //         drivetrain.applyRequest(
+    //             () ->
+    //                 setpointGen
+    //                     .withVelocityX(MaxSpeed.times(-joystick.getLeftY()))
+    //                     .withVelocityY(MaxSpeed.times(-joystick.getLeftX()))
+    //
+    // .withRotationalRate(Constants.MaxAngularRate.times(-joystick.getRightX()))
+    //
+    // .withOperatorForwardDirection(drivetrain.getOperatorForwardDirection())));
+
+    // // Custom Swerve Request that use ProfiledFieldCentricFacingAngle. Allows you to face
+    // specific
+    // // direction while driving
+    // ProfiledFieldCentricFacingAngle driveFacingAngle =
+    //     new ProfiledFieldCentricFacingAngle(
+    //             new TrapezoidProfile.Constraints(
+    //                 Constants.MaxAngularRate.baseUnitMagnitude(),
+    //                 Constants.MaxAngularRate.div(0.25).baseUnitMagnitude()))
+    //         .withDeadband(MaxSpeed.times(0.1))
+    //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+    // // Set PID for ProfiledFieldCentricFacingAngle
+    // driveFacingAngle.HeadingController.setPID(7, 0, 0);
+    // joystick
+    //     .y()
+    //     .whileTrue(
+    //         drivetrain
+    //             .runOnce(() -> driveFacingAngle.resetProfile(drivetrain.getRotation()))
+    //             .andThen(
+    //                 drivetrain.applyRequest(
+    //                     () ->
+    //                         driveFacingAngle
+    //                             .withVelocityX(
+    //                                 MaxSpeed.times(
+    //                                     -joystick
+    //                                         .getLeftY())) // Drive forward with negative Y
+    // (forward)
+    //                             .withVelocityY(MaxSpeed.times(-joystick.getLeftX()))
+    //                             .withTargetDirection(
+    //                                 new Rotation2d(
+    //                                     -joystick.getRightY(), -joystick.getRightX())))));
+
+    // // Run SysId routines when holding back/start and X/Y.
+    // // Note that each routine should be run exactly once in a single log.
+    // joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+    // joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+    // joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+    // joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+
+    // // reset the field-centric heading on left bumper press
+    joystick.x().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+    // joystick.a().onTrue(flywheel.L1()).onTrue(arm.L1()).onTrue(elevator.L1());
+    // joystick.b().onTrue(flywheel.L2()).onTrue(arm.L2()).onTrue(elevator.L2());
+
+    // joystick
+    //     .leftBumper()
+    //     .whileTrue(
+    //         drivetrain.defer(
+    //             () ->
+    //                 DriveCommands.autoAlignToClosestBranch(
+    //                     drivetrain, true))); // Align to LEFT pole
+    // joystick
+    //     .rightBumper()
+    //     .whileTrue(
+    //         drivetrain.defer(
+    //             () ->
+    //                 DriveCommands.autoAlignToClosestBranch(
+    //                     drivetrain, false))); // Align to RIGHT pole
+
     joystick
-        .b()
+        .leftBumper()
         .whileTrue(
-            drivetrain.applyRequest(
-                () ->
-                    point.withModuleDirection(
-                        new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
+            drivetrain.defer(
+                () -> {
+                  Pose2d targetPose =
+                      DriveCommands.getClosestBranchPose(drivetrain.getPose(), true); // LEFT
+                  return AutoBuilder.pathfindToPose(
+                      targetPose, new PathConstraints(5.0, 5.0, 540, 700), 0.0);
+                }));
 
-    // Custom Swerve Request that use PathPlanner Setpoint Generator. Tuning NEEDED. Instructions
-    // can be found here
-    // https://hemlock5712.github.io/Swerve-Setup/talonfx-swerve-tuning.html
-    SwerveSetpointGen setpointGen =
-        new SwerveSetpointGen(
-                drivetrain.getChassisSpeeds(),
-                drivetrain.getModuleStates(),
-                drivetrain::getRotation)
-            .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
     joystick
-        .x()
+        .rightBumper()
         .whileTrue(
-            drivetrain.applyRequest(
-                () ->
-                    setpointGen
-                        .withVelocityX(MaxSpeed.times(-joystick.getLeftY()))
-                        .withVelocityY(MaxSpeed.times(-joystick.getLeftX()))
-                        .withRotationalRate(Constants.MaxAngularRate.times(-joystick.getRightX()))
-                        .withOperatorForwardDirection(drivetrain.getOperatorForwardDirection())));
-
-    // Custom Swerve Request that use ProfiledFieldCentricFacingAngle. Allows you to face specific
-    // direction while driving
-    ProfiledFieldCentricFacingAngle driveFacingAngle =
-        new ProfiledFieldCentricFacingAngle(
-                new TrapezoidProfile.Constraints(
-                    Constants.MaxAngularRate.baseUnitMagnitude(),
-                    Constants.MaxAngularRate.div(0.25).baseUnitMagnitude()))
-            .withDeadband(MaxSpeed.times(0.1))
-            .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
-    // Set PID for ProfiledFieldCentricFacingAngle
-    driveFacingAngle.HeadingController.setPID(7, 0, 0);
-    joystick
-        .y()
-        .whileTrue(
-            drivetrain
-                .runOnce(() -> driveFacingAngle.resetProfile(drivetrain.getRotation()))
-                .andThen(
-                    drivetrain.applyRequest(
-                        () ->
-                            driveFacingAngle
-                                .withVelocityX(
-                                    MaxSpeed.times(
-                                        -joystick
-                                            .getLeftY())) // Drive forward with negative Y (forward)
-                                .withVelocityY(MaxSpeed.times(-joystick.getLeftX()))
-                                .withTargetDirection(
-                                    new Rotation2d(
-                                        -joystick.getRightY(), -joystick.getRightX())))));
-
-    // Run SysId routines when holding back/start and X/Y.
-    // Note that each routine should be run exactly once in a single log.
-    joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-    joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-    joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-    joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
-
-    // reset the field-centric heading on left bumper press
-    // joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
-    joystick.a().onTrue(flywheel.L1()).onTrue(arm.L1()).onTrue(elevator.L1());
-    joystick.b().onTrue(flywheel.L2()).onTrue(arm.L2()).onTrue(elevator.L2());
-
-    joystick.leftBumper().onTrue(DriveCommands.autoAlignToClosestBranch(drivetrain, true));  // Align to LEFT pole
-joystick.rightBumper().onTrue(DriveCommands.autoAlignToClosestBranch(drivetrain, false)); // Align to RIGHT pole
-
+            drivetrain.defer(
+                () -> {
+                  Pose2d targetPose =
+                      DriveCommands.getClosestBranchPose(drivetrain.getPose(), false); // RIGHT
+                  return AutoBuilder.pathfindToPose(
+                      targetPose, new PathConstraints(5.0, 5.0, 540.0, 730), 0.0);
+                }));
   }
 
   public Command getAutonomousCommand() {
